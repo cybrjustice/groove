@@ -28,34 +28,35 @@
           <button id="melody-load">Load</button>
           <input id="melody-file" type="file" style="display:none;">
         </div>
-        <div id="ledgrid-section" style="margin:2em 0;">
-  <div style="font-weight:bold;margin-bottom:8px;">LED Grid Sampler (5x5)</div>
-  <div id="led-grid-wrap"></div>
-  <div style="margin-top:10px;">
-    <button id="led-clear">Clear</button>
-    <button id="led-save">Save Pattern</button>
-    <button id="led-load">Load Pattern</button>
-    <input type="file" id="led-file" accept="application/json" style="display:none;">
-  </div>
-</div>
-      </section>
-      <section id="led-section" style="display:none;">
-        <div id="led-controls">
-          <button id="led-clear">Clear</button>
-          <button id="led-save">Save</button>
-          <button id="led-load">Load</button>
-          <input id="led-file" type="file" style="display:none;">
-        </div>
-        <div id="led-grid-wrap"></div>
-        <div id="sample-palette">
-          <label>Samples:</label>
-          <span class="sample-btn" data-sample="kick.wav">Kick</span>
-          <span class="sample-btn" data-sample="snare.wav">Snare</span>
-          <span class="sample-btn" data-sample="hat.wav">Hat</span>
-          <span class="sample-btn" data-sample="clap.wav">Clap</span>
-          <span class="sample-btn" data-sample="perc1.wav">Perc</span>
-          <span style="color:#888; font-size:0.95em;">(Drag onto row)</span>
-        </div>
+        <!-- LED GRID TAB -->
+  <section id="led-section" style="display:none;">
+    <h2>LED Grid Authentication</h2>
+    <div style="margin-bottom:1em;">
+      <button id="led-melody-load">Open Melody JSON</button>
+      <input type="file" id="led-melody-file" accept="application/json" style="display:none;">
+      <span id="led-melody-filename" style="color:#888;margin-left:10px;"></span>
+    </div>
+    <div style="margin:1em 0;">
+      <b>Melody SHA-256:</b>
+      <span id="led-melody-hash" style="font-family:monospace;user-select:all;"></span>
+      <button id="led-melody-copy">Copy</button>
+      <span id="led-melody-copy-status" style="color:#2a5;"></span>
+    </div>
+    <div id="led-grid-wrap" style="margin-top:18px;"></div>
+    <div style="margin:1em 0;">
+      <b>LED Grid Auth Code:</b>
+      <span id="led-grid-hash" style="font-family:monospace;user-select:all;"></span>
+      <button id="led-grid-copy">Copy</button>
+      <span id="led-grid-copy-status" style="color:#2a5;"></span>
+    </div>
+    <div style="margin-top:10px;">
+      <button id="led-clear">Clear</button>
+      <button id="led-save">Save Pattern</button>
+      <button id="led-load">Load Pattern</button>
+      <input type="file" id="led-file" accept="application/json" style="display:none;">
+    </div>
+  </section>
+</main>
       </section>
       <section id="cipher-section">
         <div>
