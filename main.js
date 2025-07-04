@@ -678,3 +678,23 @@ window.onload = function () {
   updateMelodyButtons();
   renderLedGrid();
 };
+// --- TAB SWITCHING LOGIC ---
+function showTab(tab) {
+  // Show/hide main sections
+  document.getElementById('melody-section').style.display = (tab === 'melody' || tab === 'both') ? '' : 'none';
+  document.getElementById('led-section').style.display = (tab === 'led' || tab === 'both') ? '' : 'none';
+
+  // Toggle button active states
+  document.getElementById('tab-melody').classList.toggle('active', tab === 'melody');
+  document.getElementById('tab-led').classList.toggle('active', tab === 'led');
+  document.getElementById('tab-both').classList.toggle('active', tab === 'both');
+}
+
+// Attach click handlers to tabs (after DOM is ready)
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById('tab-melody').onclick = () => showTab('melody');
+  document.getElementById('tab-led').onclick = () => showTab('led');
+  document.getElementById('tab-both').onclick = () => showTab('both');
+  // Optional: Start with melody tab visible
+  showTab('melody');
+});
