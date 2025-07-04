@@ -12,10 +12,11 @@ function showTab(tab) {
   document.getElementById('tab-led').classList.toggle('active', tab === 'led');
   document.getElementById('tab-both').classList.toggle('active', tab === 'both');
   if (tab === 'led' || tab === 'both') {
-    setTimeout(() => { renderLedGrid(); }, 0);
+    setTimeout(renderLedGrid, 0);
+    setTimeout(updateLedPattern, 0);
   }
   if (tab === 'melody' || tab === 'both') {
-    setTimeout(() => { renderPiano(); }, 0);
+    setTimeout(renderPiano, 0);
   }
 }
 document.getElementById('tab-melody').onclick = () => showTab('melody');
@@ -298,7 +299,8 @@ document.getElementById('encode-btn').onclick = async function() {
   const enc = btoa(unescape(encodeURIComponent(msg)));
   document.getElementById('encode-out').textContent = enc + "::" + hash;
 };
-// --- LED GRID LOGIC ---
+
+///// --- LED GRID LOGIC + DECODE/CIPHER FEATURES --- /////
 const ledGridRows = 5, ledGridCols = 5;
 let ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
 function renderLedGrid() {
@@ -313,15 +315,33 @@ function renderLedGrid() {
       cell.onclick = () => {
         ledGrid[row][col] = !ledGrid[row][col];
         renderLedGrid();
+        updateLedPattern();
       };
       grid.appendChild(cell);
     }
   }
   gridWrap.appendChild(grid);
+  updateLedPattern();
 }
+function getLedPattern() {
+  return ledGrid.flat().map(v => v ? '1' : '0').join('');
+}
+function updateLedPattern() {
+  document.getElementById('led-pattern').textContent = getLedPattern();
+}
+document.getElementById('led-pattern-copy').onclick = function() {
+  const pattern = document.getElementById('led-pattern').textContent;
+  if (pattern) {
+    navigator.clipboard.writeText(pattern).then(()=>{
+      document.getElementById('led-pattern-copy-status').textContent = "Copied!";
+      setTimeout(()=>document.getElementById('led-pattern-copy-status').textContent = '', 1200);
+    });
+  }
+};
 document.getElementById('led-clear').onclick = function() {
   ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
   renderLedGrid();
+  updateLedPattern();
 };
 document.getElementById('led-save').onclick = function() {
   const data = JSON.stringify(ledGrid);
@@ -346,10 +366,51 @@ document.getElementById('led-file').onchange = function(e) {
       if (Array.isArray(data) && data.length === ledGridRows && data[0].length === ledGridCols) {
         ledGrid = data;
         renderLedGrid();
+        updateLedPattern();
       }
     } catch { /* ignore */ }
   };
   reader.readAsText(file);
+};
+
+// --- LED CIPHER --- //
+function melodyToHash() {
+  return melody.map(n => n.midi).join(',');
+}
+function ledToHash() {
+  return ledGrid.map(row => row.map(c => c ? 1 : 0).join('')).join('|');
+}
+function bothToHash() {
+  return melodyToHash() + '||' + ledToHash();
+}
+document.getElementById('encode-btn-led').onclick = function () {
+  const msg = document.getElementById('cipher-input').value;
+  const mode = document.getElementById('unlock-mode').value;
+  let pwHash;
+  if (mode === 'melody') pwHash = melodyToHash();
+  else if (mode === 'led') pwHash = ledToHash();
+  else pwHash = bothToHash();
+  document.getElementById('cipher-output').textContent =
+    btoa(unescape(encodeURIComponent(msg))) + '::' + pwHash;
+};
+document.getElementById('decode-btn-led').onclick = function () {
+  const val = document.getElementById('cipher-output').textContent.trim();
+  if (!val.includes('::')) {
+    document.getElementById('cipher-output').textContent = 'No encoded message to decode!';
+    return;
+  }
+  const [enc, pwHash] = val.split('::');
+  const mode = document.getElementById('unlock-mode').value;
+  let inputHash;
+  if (mode === 'melody') inputHash = melodyToHash();
+  else if (mode === 'led') inputHash = ledToHash();
+  else inputHash = bothToHash();
+  if (inputHash !== pwHash) {
+    document.getElementById('cipher-output').textContent = 'Wrong melody/pattern!';
+    return;
+  }
+  const msg = decodeURIComponent(escape(atob(enc)));
+  document.getElementById('cipher-output').textContent = `Decoded: ${msg}`;
 };
 // Initial render
 window.onload = function () {
