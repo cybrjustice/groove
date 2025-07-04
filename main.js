@@ -4,21 +4,14 @@ document.getElementById('zoom-btn').onclick = function() {
   this.textContent = document.body.classList.contains('body-zoomed') ? "Reset Zoom" : "Zoom 200%";
 };
 
-// --- Tab switching logic ---
-function showTab(tab) {
+// --- Tab switching logic ---function showTab(tab) {
   document.getElementById('melody-section').style.display = (tab === 'melody' || tab === 'both') ? '' : 'none';
   document.getElementById('led-section').style.display = (tab === 'led' || tab === 'both') ? '' : 'none';
   document.getElementById('tab-melody').classList.toggle('active', tab === 'melody');
   document.getElementById('tab-led').classList.toggle('active', tab === 'led');
   document.getElementById('tab-both').classList.toggle('active', tab === 'both');
-  if (tab === 'led' || tab === 'both') {
-    setTimeout(renderLedGrid, 0);
-    setTimeout(updateLedPattern, 0);
-  }
-  if (tab === 'melody' || tab === 'both') {
-    setTimeout(renderPiano, 0);
-  }
 }
+
 document.getElementById('tab-melody').onclick = () => showTab('melody');
 document.getElementById('tab-led').onclick = () => showTab('led');
 document.getElementById('tab-both').onclick = () => showTab('both');
