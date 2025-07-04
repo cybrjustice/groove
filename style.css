@@ -222,7 +222,7 @@ section {
   100% { filter: brightness(1.0);}
 }
 .hide { display: none !important; }
-#decode-out, #encode-out {
+#decode-out, #encode-out, #cipher-output {
   font-size: 1.12em;
   color: #222;
   margin-top: 0.4em;
