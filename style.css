@@ -215,6 +215,7 @@ section {
 }
 .led-cell.anim {
   animation: led-blink 0.4s;
+  /* Will have background color set inline from JS */
 }
 @keyframes led-blink {
   0% { filter: brightness(1.0);}
