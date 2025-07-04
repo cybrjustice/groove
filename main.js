@@ -139,7 +139,29 @@ function highlightKey(midi) {
   const el = document.querySelector(`.piano-key[data-midi="${midi}"]`);
   if (el) { el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 140); }
 }
-
+// Tab switching
+document.getElementById('tab-melody').onclick = function() {
+  document.getElementById('melody-section').style.display = '';
+  document.getElementById('led-section').style.display = 'none';
+  this.classList.add('active');
+  document.getElementById('tab-led').classList.remove('active');
+  document.getElementById('tab-both').classList.remove('active');
+};
+document.getElementById('tab-led').onclick = function() {
+  document.getElementById('melody-section').style.display = 'none';
+  document.getElementById('led-section').style.display = '';
+  this.classList.add('active');
+  document.getElementById('tab-melody').classList.remove('active');
+  document.getElementById('tab-both').classList.remove('active');
+};
+document.getElementById('tab-both').onclick = function() {
+  // Optional: implement as you wish, or just show both
+  document.getElementById('melody-section').style.display = '';
+  document.getElementById('led-section').style.display = '';
+  this.classList.add('active');
+  document.getElementById('tab-melody').classList.remove('active');
+  document.getElementById('tab-led').classList.remove('active');
+};
 // ======= MELODY REC/PLAY/SAVE =======
 let melody = [];
 let isRecording = false;
