@@ -63,8 +63,8 @@
     .input-group {
       display: flex;
       align-items: center;
-      gap: 9px;
-      margin-bottom: 7px;
+      gap: 10px;
+      margin-bottom: 10px;
       flex-wrap: wrap;
     }
     .label {
@@ -104,7 +104,7 @@
       outline: none;
     }
     /* PIANO */
-    #piano-wrap {
+    #piano-wrap, #led-piano-wrap {
       margin-bottom: 18px;
       position: relative;
       user-select: none;
@@ -153,21 +153,17 @@
       color: #222 !important;
       transform: scale(1.1);
     }
-    .piano-key .key-label {
-      font-size: 0.93em;
-      margin-top: 4px;
-    }
     .piano-key .key-note {
       font-size: 0.8em;
       color: #999;
     }
-    #octave-indicator {
+    #octave-indicator, #led-octave-indicator {
       margin: 8px 0 0 0;
       font-weight: bold;
       font-size: 1.1em;
       color: #888;
     }
-    #melody-bar {
+    #melody-bar, #led-melody-bar {
       min-height: 24px;
       margin-bottom: 12px;
     }
@@ -310,11 +306,25 @@
           <button id="decode-btn" class="btn">Decode</button>
         </div>
         <div id="decode-out"></div>
+        <!-- LED Unlock Piano -->
+        <div style="margin-top:2.5em;">
+          <h3>Unlock Melody (Piano)</h3>
+          <div id="led-piano-wrap"></div>
+          <div id="led-melody-bar"></div>
+          <div class="input-group">
+            <button id="led-melody-record" class="btn">Record</button>
+            <button id="led-melody-stop" class="btn" disabled>Stop</button>
+            <button id="led-melody-play" class="btn">Play</button>
+            <button id="led-melody-clear" class="btn">Clear</button>
+            <button id="led-unlock-btn" class="btn">Unlock</button>
+          </div>
+          <div id="led-unlock-status" style="margin-bottom:1em;font-weight:bold;"></div>
+        </div>
       </section>
     </main>
   </div>
   <script>
-    // ----- Tab switching logic -----
+    // Tab switching logic
     function showTab(tab) {
       document.getElementById('melody-section').style.display = (tab === 'melody' || tab === 'both') ? '' : 'none';
       document.getElementById('led-section').style.display = (tab === 'led' || tab === 'both') ? '' : 'none';
@@ -322,7 +332,7 @@
       document.getElementById('tab-led').classList.toggle('active', tab === 'led');
       document.getElementById('tab-both').classList.toggle('active', tab === 'both');
       if (tab === 'led' || tab === 'both') {
-        setTimeout(() => { renderLedGrid(); updateLedGridHash(); }, 0);
+        setTimeout(() => { renderLedGrid(); updateLedGridHash(); renderLedPiano(); }, 0);
       }
       if (tab === 'melody' || tab === 'both') {
         setTimeout(() => { renderPiano(); }, 0);
@@ -332,7 +342,7 @@
     document.getElementById('tab-led').onclick = () => showTab('led');
     document.getElementById('tab-both').onclick = () => showTab('both');
 
-    // ----- PIANO LOGIC -----
+    // --- Main Piano Logic (Melody Tab) ---
     const WHITE_KEYS = ['q','w','e','r','t','y','u','i','o','p','[',']','\\','PageUp','PageDown'];
     const BLACK_KEYS = ['2','3','5','6','7','9','0','-','=','\''];
     const WHITE_OFFSETS = [0,2,4,5,7,9,11,12,14,16,17,19,21,24,24];
@@ -412,7 +422,7 @@
       const el = document.querySelector(`.piano-key[data-midi="${midi}"]`);
       if (el) { el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 140); }
     }
-    // ----- Melody Recording -----
+    // Melody Recording
     let melody = [];
     let isRecording = false;
     let melodyPlaybackTimer = null;
@@ -611,7 +621,7 @@
       document.getElementById('encode-out').textContent = enc + "::" + hash;
     };
 
-    // ----- LED GRID LOGIC -----
+    // --- LED GRID LOGIC ---
     const ledGridRows = 5, ledGridCols = 5;
     let ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
     function renderLedGrid() {
@@ -845,7 +855,148 @@
       }
     };
 
-    // --- INIT ---
+    // --- LED UNLOCK PIANO LOGIC ---
+    let ledUnlockMelody = [];
+    let ledUnlockRecording = false;
+    let ledUnlockPlaybackTimer = null;
+    let ledUnlockMelodyStart = null;
+    function renderLedPiano() {
+      const wrap = document.getElementById('led-piano-wrap');
+      wrap.innerHTML = '';
+      const piano = document.createElement('div');
+      piano.className = 'piano';
+      for(let i=0; i<7; ++i) {
+        const midi = 60 + i*2 - (i>2?1:0); // C D E F G A B
+        const div = document.createElement('div');
+        div.className = 'piano-key white';
+        div.dataset.midi = midi;
+        div.innerHTML = `<span class="key-note">${['C','D','E','F','G','A','B'][i]}</span>`;
+        div.onmousedown = () => { ledUnlockPlayNote(midi); addToLedUnlockMelody(midi); };
+        piano.appendChild(div);
+      }
+      wrap.appendChild(piano);
+    }
+    function ledUnlockPlayNote(midi, vol=0.23) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+      const g = ctx.createGain();
+      g.gain.value = vol;
+      o.connect(g).connect(ctx.destination);
+      o.start();
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.18);
+      o.stop(ctx.currentTime + 0.19);
+      o.onended = () => ctx.close();
+      // Visual feedback
+      document.querySelectorAll('#led-piano-wrap .piano-key').forEach(k => k.classList.remove('active'));
+      const el = document.querySelector(`#led-piano-wrap .piano-key[data-midi="${midi}"]`);
+      if (el) { el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 140); }
+    }
+    function addToLedUnlockMelody(midi) {
+      if (ledUnlockRecording) {
+        const t = Date.now();
+        const relTime = ledUnlockMelodyStart ? t - ledUnlockMelodyStart : 0;
+        ledUnlockMelody.push({ midi, time: relTime });
+        updateLedUnlockMelodyBar();
+      }
+    }
+    function updateLedUnlockMelodyBar() {
+      const bar = document.getElementById('led-melody-bar');
+      bar.innerHTML = '';
+      ledUnlockMelody.forEach((n, i) => {
+        const d = document.createElement('span');
+        d.className = 'melody-note';
+        d.textContent = ['C','D','E','F','G','A','B'][(n.midi-60)%7] || n.midi;
+        bar.appendChild(d);
+      });
+    }
+    function clearLedUnlockMelody() {
+      ledUnlockMelody = [];
+      updateLedUnlockMelodyBar();
+    }
+    document.getElementById('led-melody-clear').onclick = clearLedUnlockMelody;
+    function startLedUnlockRecording() {
+      ledUnlockMelody = [];
+      ledUnlockRecording = true;
+      ledUnlockMelodyStart = Date.now();
+      updateLedUnlockMelodyBar();
+      ledUnlockUpdateButtons();
+    }
+    function stopLedUnlockRecording() {
+      ledUnlockRecording = false;
+      ledUnlockMelodyStart = null;
+      ledUnlockUpdateButtons();
+    }
+    function playLedUnlockMelody() {
+      if (!ledUnlockMelody.length) return;
+      let idx = 0;
+      function playNext() {
+        if (idx >= ledUnlockMelody.length) {
+          updateLedUnlockMelodyBar();
+          ledUnlockUpdateButtons();
+          return;
+        }
+        const n = ledUnlockMelody[idx];
+        ledUnlockPlayNote(n.midi, 0.23);
+        idx++;
+        if (idx < ledUnlockMelody.length) {
+          const nextDelay = ledUnlockMelody[idx].time - (idx > 0 ? ledUnlockMelody[idx-1].time : 0);
+          ledUnlockPlaybackTimer = setTimeout(playNext, nextDelay > 0 ? nextDelay : 120);
+        } else {
+          ledUnlockPlaybackTimer = setTimeout(() => {
+            updateLedUnlockMelodyBar();
+            ledUnlockUpdateButtons();
+          }, 400);
+        }
+      }
+      ledUnlockUpdateButtons(true);
+      playNext();
+    }
+    function ledUnlockUpdateButtons(isPlaying) {
+      document.getElementById('led-melody-record').disabled = ledUnlockRecording || isPlaying;
+      document.getElementById('led-melody-stop').disabled = !ledUnlockRecording && !isPlaying;
+      document.getElementById('led-melody-play').disabled = ledUnlockRecording || isPlaying || ledUnlockMelody.length === 0;
+      document.getElementById('led-melody-clear').disabled = isPlaying;
+    }
+    document.getElementById('led-melody-record').onclick = startLedUnlockRecording;
+    document.getElementById('led-melody-stop').onclick = function() {
+      if (ledUnlockRecording) stopLedUnlockRecording();
+      if (ledUnlockPlaybackTimer) {
+        clearTimeout(ledUnlockPlaybackTimer);
+        ledUnlockPlaybackTimer = null;
+        updateLedUnlockMelodyBar();
+        ledUnlockUpdateButtons();
+      }
+    };
+    document.getElementById('led-melody-play').onclick = playLedUnlockMelody;
+    document.getElementById('led-unlock-btn').onclick = async function() {
+      if (!loadedMelody || !loadedMelody.length) {
+        document.getElementById('led-unlock-status').textContent = "Load a melody JSON first.";
+        return;
+      }
+      if (!ledUnlockMelody.length) {
+        document.getElementById('led-unlock-status').textContent = "Record a melody to unlock.";
+        return;
+      }
+      // Compute hash for loaded melody
+      const midiArr = loadedMelody.map(n => (typeof n === 'object' ? n.midi : n));
+      const timingArr = loadedMelody.map(n => (typeof n === 'object' ? n.time || 0 : 0));
+      const bytes = new Uint8Array([...midiArr, ...timingArr]);
+      const hashBuf = await window.crypto.subtle.digest('SHA-256', bytes);
+      const melodyHash = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      // Compute hash for played (unlock) melody
+      const midiArr2 = ledUnlockMelody.map(n => n.midi);
+      const timingArr2 = ledUnlockMelody.map(n => n.time || 0);
+      const bytes2 = new Uint8Array([...midiArr2, ...timingArr2]);
+      const hashBuf2 = await window.crypto.subtle.digest('SHA-256', bytes2);
+      const melodyHash2 = Array.from(new Uint8Array(hashBuf2)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      if (melodyHash === melodyHash2) {
+        document.getElementById('led-unlock-status').textContent = "✔ Melody matched! Unlocked.";
+      } else {
+        document.getElementById('led-unlock-status').textContent = "❌ Melody does not match.";
+      }
+    };
     function ledTabInit() {
       renderPiano();
       updateMelodyBar();
@@ -853,11 +1004,15 @@
       updateMelodyHash();
       renderLedGrid();
       updateLedGridHash();
+      renderLedPiano();
+      updateLedUnlockMelodyBar();
+      ledUnlockUpdateButtons();
       document.getElementById('led-melody-filename').textContent = '';
       document.getElementById('led-melody-hash').textContent = '';
       document.getElementById('led-grid-hash').textContent = '';
       document.getElementById('led-play').disabled = false;
       document.getElementById('led-stop').disabled = true;
+      document.getElementById('led-unlock-status').textContent = '';
     }
     if (document.readyState === "loading") {
       window.addEventListener('DOMContentLoaded', ledTabInit);
