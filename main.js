@@ -372,6 +372,186 @@ document.getElementById('led-file').onchange = function(e) {
   };
   reader.readAsText(file);
 };
+
+// --- Pastel Palette ---
+const pastelPalette = [
+  "#a3cef1", "#ffb3c6", "#caffbf", "#fdffb6", "#ffd6a5",
+  "#b5ead7", "#bdb2ff", "#ffc6ff", "#fffffc", "#ffe5d9",
+  "#b2f7ef", "#f6dfeb", "#e7c6ff", "#e0aaff", "#f1c0e8"
+];
+
+// --- Morse Map (A-Z 0-9 space) ---
+const morseMap = {
+  A: ".-",    B: "-...",  C: "-.-.",  D: "-..",  E: ".",    F: "..-.",
+  G: "--.",   H: "....",  I: "..",    J: ".---", K: "-.-",  L: ".-..",
+  M: "--",    N: "-.",    O: "---",   P: ".--.", Q: "--.-", R: ".-.",
+  S: "...",   T: "-",     U: "..-",   V: "...-", W: ".--",  X: "-..-",
+  Y: "-.--",  Z: "--..",  1: ".----", 2: "..---",3: "...--",4: "....-",
+  5: ".....", 6: "-....", 7: "--...", 8: "---..",9: "----.",0: "-----",
+  " ": "/"
+};
+
+// --- Fibonacci Generator ---
+function* fibonacci() {
+  let a = 1, b = 2;
+  while (true) {
+    yield a;
+    [a, b] = [b, a + b];
+  }
+}
+
+// --- Map MIDI Pitch to Grid Cell (lowest = top left, highest = bottom right) ---
+function midiToGridCell(midi, minMidi = 48, maxMidi = 72) {
+  // Maps [minMidi, maxMidi] to grid 0..24 (row-major)
+  let idx = Math.round(((midi - minMidi) / (maxMidi - minMidi)) * 24);
+  idx = Math.max(0, Math.min(24, idx));
+  return { row: Math.floor(idx / 5), col: idx % 5 };
+}
+
+// --- Convert Message to Morse String ---
+function messageToMorseSequence(message) {
+  return message.toUpperCase().split('').map(ch => morseMap[ch] || '').join(' ');
+}
+
+// --- Morse Sequence to Light+Sound Frames (Fibonacci-timed) ---
+function morseToFrames(morse, color="#ffe600", durationBase=80, soundMidi=72) {
+  let frames = [];
+  let fib = fibonacci();
+  let pos = { row: 2, col: 2 }; // Morse in center LED
+  for (let symbol of morse) {
+    if(symbol === ".") {
+      let dur = fib.next().value * durationBase;
+      frames.push({ leds: [{...pos, color}], duration: dur, sound: {midi: soundMidi, type: "dot"} });
+      frames.push({ leds: [], duration: durationBase, sound: null }); // gap
+    } else if(symbol === "-") {
+      let dur = fib.next().value * durationBase * 2;
+      frames.push({ leds: [{...pos, color}], duration: dur, sound: {midi: soundMidi, type: "dash"} });
+      frames.push({ leds: [], duration: durationBase, sound: null }); // gap
+    } else if(symbol === " ") {
+      // Gap between letters
+      frames.push({ leds: [], duration: durationBase * 4, sound: null });
+      fib = fibonacci(); // reset Fibonacci for next letter
+    } else {
+      // e.g. "/", treat as word gap
+      frames.push({ leds: [], duration: durationBase * 6, sound: null });
+      fib = fibonacci();
+    }
+  }
+  return frames;
+}
+
+// --- Melody to Frames (pitch-mapped, pastel color, pause handled, sound) ---
+function melodyToFrames(melody, pastelPalette, minMidi=48, maxMidi=72) {
+  let frames = [];
+  let lastTime = 0;
+  for(let i=0; i<melody.length; ++i) {
+    let note = melody[i];
+    let { row, col } = midiToGridCell(note.midi, minMidi, maxMidi);
+    let color = pastelPalette[note.midi % pastelPalette.length];
+    // Pause if needed
+    if(i > 0 && note.time - lastTime > 300) {
+      frames.push({ leds: [], duration: note.time - lastTime, sound: null });
+    }
+    frames.push({
+      leds: [{ row, col, color }],
+      duration: (melody[i+1]?.time || note.time + 300) - note.time,
+      sound: { midi: note.midi, type: "melody" }
+    });
+    lastTime = note.time;
+  }
+  return frames;
+}
+
+// --- Playback Function for Frames (with sound) ---
+function playFrames(frames, renderLedGrid, onDone) {
+  let idx = 0;
+  function showFrame() {
+    if(idx >= frames.length) {
+      if (onDone) onDone();
+      return;
+    }
+    let frame = frames[idx];
+    renderLedGrid(frame.leds);
+    if(frame.sound) {
+      playNote(frame.sound.midi, frame.sound.type);
+    }
+    setTimeout(showFrame, frame.duration);
+    idx++;
+  }
+  showFrame();
+}
+
+// --- Render LED Grid: expects 25 .led-cell elements row-major order ---
+function renderLedGrid(leds=[]) {
+  let grid = Array.from({length: 5}, () => Array(5).fill("#20273c"));
+  leds.forEach(({row, col, color}) => {
+    if(row >= 0 && row < 5 && col >= 0 && col < 5) grid[row][col] = color;
+  });
+  let cells = document.querySelectorAll('.led-cell');
+  for(let i=0;i<25;++i) {
+    let row = Math.floor(i/5), col = i%5;
+    cells[i].style.background = grid[row][col];
+  }
+}
+
+// --- Play Note Function (triangle for melody, short blip for Morse) ---
+function playNote(midi, type="melody") {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    let freq = 440 * Math.pow(2, (midi - 69) / 12);
+    o.frequency.value = freq;
+    if (type === "melody") {
+      o.type = 'triangle';
+      g.gain.value = 0.18;
+      o.connect(g).connect(ctx.destination);
+      o.start();
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.18);
+      o.stop(ctx.currentTime + 0.19);
+    } else if (type === "dot") {
+      o.type = 'square';
+      g.gain.value = 0.09;
+      o.connect(g).connect(ctx.destination);
+      o.start();
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.09);
+      o.stop(ctx.currentTime + 0.10);
+    } else if (type === "dash") {
+      o.type = 'square';
+      g.gain.value = 0.12;
+      o.connect(g).connect(ctx.destination);
+      o.start();
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.19);
+      o.stop(ctx.currentTime + 0.20);
+    }
+    o.onended = () => { ctx.close(); };
+  } catch (e) {}
+}
+
+// --- Hook up to button and run ---
+document.addEventListener("DOMContentLoaded", function() {
+  // Add this to your HTML: <button id="led-fib-morse">Fibonacci Morse Lightshow</button>
+  const fibBtn = document.getElementById("led-fib-morse");
+  if (!fibBtn) return;
+  fibBtn.onclick = function() {
+    if (!window.melody || !Array.isArray(window.melody) || window.melody.length === 0) {
+      alert("Record or load a melody first!");
+      return;
+    }
+    const userMsg = prompt("Enter a short message (A-Z 0-9):", "GO!");
+    if (!userMsg) return;
+    // Pick a Morse pitch (center C5: midi 72), or any
+    const morsePitch = 72;
+    const morse = messageToMorseSequence(userMsg);
+    const morseFrames = morseToFrames(morse, "#ffe600", 80, morsePitch);
+    const melodyFrames = melodyToFrames(window.melody, pastelPalette, 48, 72);
+    const frames = [...morseFrames, ...melodyFrames];
+    playFrames(frames, renderLedGrid, () => {
+      // Optionally, reset grid after show
+      setTimeout(() => renderLedGrid([]), 500);
+    });
+  };
+});
 // --- LED Playback with Loop, BPM, and Pastel Colors ---
 
 const pastelPalette = [
