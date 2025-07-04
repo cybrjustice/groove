@@ -230,6 +230,9 @@
       50% { filter: brightness(2.2);}
       100% { filter: brightness(1.0);}
     }
+    .hide { display: none !important; }
+    #decode-out { font-size: 1.12em; color: #222; margin-top: 0.4em; }
+    #encode-out { font-size: 1.12em; color: #222; margin-top: 0.4em; }
   </style>
 </head>
 <body>
@@ -264,6 +267,12 @@
           <button id="melody-copy" class="btn">Copy</button>
           <span id="melody-copy-status" class="copy-status"></span>
         </div>
+        <div class="input-group" style="margin-top:2em;">
+          <span class="label">Message to Encode:</span>
+          <input id="encode-msg" style="font-size:1em; padding:4px 12px; border-radius:6px; border:1px solid #ffe600;">
+          <button id="encode-btn" class="btn">Encode</button>
+        </div>
+        <div id="encode-out"></div>
       </section>
 
       <!-- LED Grid Section -->
@@ -288,11 +297,19 @@
         </div>
         <div id="led-grid-wrap" style="margin:18px 0 14px 0;"></div>
         <div class="input-group">
+          <button id="led-play" class="btn">Play Melody on Grid</button>
+          <button id="led-stop" class="btn" disabled>Stop</button>
           <button id="led-clear" class="btn">Clear</button>
           <button id="led-save" class="btn">Save Pattern</button>
           <button id="led-load" class="btn">Load Pattern</button>
           <input type="file" id="led-file" accept="application/json" style="display:none;">
         </div>
+        <div class="input-group" style="margin-top:2em;">
+          <span class="label">Paste Encoded String:</span>
+          <input id="decode-in" style="font-size:1em; padding:4px 12px; border-radius:6px; border:1px solid #ffe600;">
+          <button id="decode-btn" class="btn">Decode</button>
+        </div>
+        <div id="decode-out"></div>
       </section>
     </main>
   </div>
@@ -306,6 +323,9 @@
       document.getElementById('tab-both').classList.toggle('active', tab === 'both');
       if (tab === 'led' || tab === 'both') {
         setTimeout(() => { renderLedGrid(); updateLedGridHash(); }, 0);
+      }
+      if (tab === 'melody' || tab === 'both') {
+        setTimeout(() => { renderPiano(); }, 0);
       }
     }
     document.getElementById('tab-melody').onclick = () => showTab('melody');
@@ -354,7 +374,7 @@
       });
       wrap.appendChild(piano);
       let octDiv = document.getElementById('octave-indicator');
-      octDiv.innerHTML = `Current Octave: <span id="octave-num">${currentOctave}</span>`;
+      if(octDiv) octDiv.innerHTML = `Current Octave: <span id="octave-num">${currentOctave}</span>`;
     }
     function blackKeyPosition(i) {
       const positions = [1.6,2.6,4.6,5.6,6.6,8.6,9.6,11.6,12.6,13.6];
@@ -570,6 +590,27 @@
       }
     });
 
+    // ENCODE (melody page)
+    document.getElementById('encode-btn').onclick = async function() {
+      const msg = document.getElementById('encode-msg').value;
+      if (!msg.trim()) {
+        document.getElementById('encode-out').textContent = "Type a message.";
+        return;
+      }
+      if (!melody.length) {
+        document.getElementById('encode-out').textContent = "Record a melody first.";
+        return;
+      }
+      const midiArr = melody.map(n => n.midi);
+      const timingArr = melody.map(n => n.time || 0);
+      const bytes = new Uint8Array([...midiArr, ...timingArr]);
+      const hashBuf = await window.crypto.subtle.digest('SHA-256', bytes);
+      const hash = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      const enc = btoa(unescape(encodeURIComponent(msg)));
+      // Format: encoded::hash
+      document.getElementById('encode-out').textContent = enc + "::" + hash;
+    };
+
     // ----- LED GRID LOGIC -----
     const ledGridRows = 5, ledGridCols = 5;
     let ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
@@ -618,6 +659,7 @@
           document.getElementById('led-melody-filename').textContent = loadedMelodyFilename;
           await updateLedMelodyHash();
           if ((Array.isArray(loadedMelody) && loadedMelody.length > 0)) {
+            stopLedGridPlayback();
             visualizeMelodyOnGrid(loadedMelody);
           }
         } catch {
@@ -650,11 +692,11 @@
       }
     };
     function getLedGridCode() {
-      return ledGrid.map(row => row.map(c => (c ? '1' : '0')).join('')).join('');
+      // Output a 25-character string, one per cell: 1=on, 0=off
+      return ledGrid.flat().map(v => v ? '1' : '0').join('');
     }
     function updateLedGridHash() {
-      const code = getLedGridCode();
-      document.getElementById('led-grid-hash').textContent = code;
+      document.getElementById('led-grid-hash').textContent = getLedGridCode();
     }
     document.getElementById('led-grid-copy').onclick = function() {
       const code = document.getElementById('led-grid-hash').textContent;
@@ -699,6 +741,63 @@
       };
       reader.readAsText(file);
     };
+
+    // --- Grid Play/Loop Melody ---
+    let ledPlaybackActive = false, ledPlaybackIdx = 0, ledPlaybackTimer = null;
+    document.getElementById('led-play').onclick = function() {
+      if (!loadedMelody || !loadedMelody.length) {
+        alert("Load a melody JSON first.");
+        return;
+      }
+      this.disabled = true;
+      document.getElementById('led-stop').disabled = false;
+      ledPlaybackActive = true;
+      ledPlaybackIdx = 0;
+      playMelodyOnGridLoop();
+    };
+    document.getElementById('led-stop').onclick = stopLedGridPlayback;
+    function stopLedGridPlayback() {
+      ledPlaybackActive = false;
+      document.getElementById('led-play').disabled = false;
+      document.getElementById('led-stop').disabled = true;
+      clearTimeout(ledPlaybackTimer);
+      renderLedGrid();
+    }
+    function playMelodyOnGridLoop() {
+      if (!ledPlaybackActive || !loadedMelody || !loadedMelody.length) return;
+      const melodyData = loadedMelody;
+      const midiArr = melodyData.map(n => (typeof n === 'object' ? n.midi : n));
+      const timingArr = melodyData.map(n => (typeof n === 'object' ? n.time || 0 : 0));
+      let gridCells = Array.from(document.querySelectorAll('.led-cell'));
+      let idx = 0;
+      function playStep() {
+        if (!ledPlaybackActive) return;
+        // Blinking cell
+        let cellIdx = idx % gridCells.length;
+        let cell = gridCells[cellIdx];
+        let color = pastelPalette[idx % pastelPalette.length];
+        cell.style.background = color;
+        cell.classList.add('anim');
+        // Sound
+        playNote(midiArr[idx], 0.23);
+        setTimeout(() => {
+          cell.classList.remove('anim');
+          cell.style.background = '';
+          idx++;
+          if (idx < midiArr.length) {
+            let delay = (timingArr[idx] - (timingArr[idx-1]||0));
+            if (delay < 20) delay = 160;
+            ledPlaybackTimer = setTimeout(playStep, delay);
+          } else {
+            idx = 0;
+            ledPlaybackTimer = setTimeout(playStep, 600); // loop pause
+          }
+        }, 180);
+      }
+      playStep();
+    }
+
+    // --- Melody Pattern Visualization as LED Animation ---
     function visualizeMelodyOnGrid(melody) {
       const gridCells = Array.from(document.querySelectorAll('.led-cell'));
       const midiArr = melody.map(n => (typeof n === 'object' ? n.midi : n));
@@ -721,6 +820,31 @@
       blinkStep(0);
     }
 
+    // --- DECODE (LED Grid tab) ---
+    document.getElementById('decode-btn').onclick = async function() {
+      const encstr = document.getElementById('decode-in').value.trim();
+      if (!encstr) { document.getElementById('decode-out').textContent = "Paste an encoded string."; return; }
+      if (!loadedMelody || !loadedMelody.length) { document.getElementById('decode-out').textContent = "Load a melody JSON first."; return; }
+      if (!encstr.includes('::')) { document.getElementById('decode-out').textContent = "Invalid string."; return; }
+      const [enc, hash] = encstr.split('::');
+      // Compute melody hash
+      const midiArr = loadedMelody.map(n => (typeof n === 'object' ? n.midi : n));
+      const timingArr = loadedMelody.map(n => (typeof n === 'object' ? n.time || 0 : 0));
+      const bytes = new Uint8Array([...midiArr, ...timingArr]);
+      const hashBuf = await window.crypto.subtle.digest('SHA-256', bytes);
+      const melodyHash = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      if (hash !== melodyHash) {
+        document.getElementById('decode-out').textContent = "Melody hash does not match. Wrong melody!";
+        return;
+      }
+      try {
+        const msg = decodeURIComponent(escape(atob(enc)));
+        document.getElementById('decode-out').textContent = "Decoded: " + msg;
+      } catch {
+        document.getElementById('decode-out').textContent = "Error decoding message.";
+      }
+    };
+
     // --- INIT ---
     function ledTabInit() {
       renderPiano();
@@ -732,6 +856,8 @@
       document.getElementById('led-melody-filename').textContent = '';
       document.getElementById('led-melody-hash').textContent = '';
       document.getElementById('led-grid-hash').textContent = '';
+      document.getElementById('led-play').disabled = false;
+      document.getElementById('led-stop').disabled = true;
     }
     if (document.readyState === "loading") {
       window.addEventListener('DOMContentLoaded', ledTabInit);
