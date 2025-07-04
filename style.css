@@ -168,65 +168,79 @@ section {
 }
 
 #led-grid-wrap {
-  margin: 30px 0 18px 0;
   display: flex;
   justify-content: center;
+  margin: 0.6em 0 1em 0;
 }
 .led-grid {
   display: grid;
-  grid-template-columns: repeat(5, 32px);
-  grid-template-rows: repeat(5, 32px);
-  gap: 6px;
-  background: #181c29;
-  padding: 10px;
-  border-radius: 9px;
-  box-shadow: 0 0 10px #00fff7;
+  grid-template-columns: repeat(5, 36px);
+  grid-template-rows: repeat(5, 36px);
+  gap: 7px;
+  background: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 1px 7px #ffe60044;
+  border: 2px solid #ffe600;
   width: max-content;
 }
 .led-cell {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  background: #20273c;
-  border: 2px solid #00fff7;
-  box-shadow: 0 0 7px #00fff7 inset;
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  background: #ececec;
+  border: 1.5px solid #ffe600;
+  box-shadow: 0 0 4px #ffe60044 inset;
   cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition: background 0.14s, border-color 0.18s;
 }
 .led-cell.on {
   background: #ffe600;
-  box-shadow: 0 0 12px #ffe600, 0 0 7px #00fff7 inset;
-.led-cell.sampler-assigned {
-  border: 2.5px solid #222;
+  border-color: #222;
+  box-shadow: 0 0 12px #ffe60077, 0 0 7px #ffe60044 inset;
 }
-.led-row-label {
-  position: absolute;
-  left: -30px;
-  top: 0;
-  font-size: 0.92em;
-  color: #aaa;
-}
-#sample-palette {
-  margin: 10px 0 0 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1em;
-}
-.sample-btn {
-  padding: 3px 10px;
+.btn {
+  background: #ececec;
+  color: #222;
+  border: none;
   border-radius: 6px;
+  font-size: 1em;
+  font-family: inherit;
+  padding: 7px 16px;
+  cursor: pointer;
+  margin-right: 8px;
+  margin-bottom: 7px;
+  transition: background 0.15s;
+}
+.btn:active, .btn:focus {
   background: #ffe600;
   color: #222;
-  cursor: grab;
-  user-select: none;
-  border: 1.2px solid #aaa;
-  margin-right: 6px;
-  font-weight: bold;
+  outline: none;
 }
-.sample-btn:active {
-  background: #222;
-  color: #ffe600;
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 7px;
+  flex-wrap: wrap;
+}
+.label {
+  font-weight: bold;
+  color: #222;
+  margin-right: 5px;
+}
+.mono {
+  font-family: "Space Mono", monospace;
+  font-size: 1.09em;
+  color: #444;
+  margin-right: 7px;
+  word-break: break-all;
+  user-select: all;
+}
+.copy-status {
+  color: #2a5;
+  font-size: 0.95em;
+  min-width: 50px;
 }
 #cipher-section {
   margin-top: 36px;
