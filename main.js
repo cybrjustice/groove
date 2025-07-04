@@ -372,7 +372,93 @@ document.getElementById('led-file').onchange = function(e) {
   };
   reader.readAsText(file);
 };
+// --- LED Playback with Loop, BPM, and Pastel Colors ---
 
+const pastelPalette = [
+  "#a3cef1", "#ffb3c6", "#caffbf", "#fdffb6", "#ffd6a5",
+  "#b5ead7", "#bdb2ff", "#ffc6ff", "#fffffc", "#ffe5d9",
+  "#b2f7ef", "#f6dfeb", "#e7c6ff", "#e0aaff", "#f1c0e8",
+  "#f3d2c1", "#d0f4de", "#fcf6bd", "#f7d6e0", "#ccfff6"
+];
+
+let ledPlaybackActive = false;
+let ledPlaybackIdx = 0;
+let ledPlaybackTimer = null;
+
+function getLedPatternArray() {
+  // Returns array of {row, col} for cells that are ON
+  const arr = [];
+  for (let row = 0; row < ledGridRows; row++) {
+    for (let col = 0; col < ledGridCols; col++) {
+      if (ledGrid[row][col]) arr.push({ row, col });
+    }
+  }
+  return arr;
+}
+
+function ledPlayStep(pattern, bpm) {
+  if (!ledPlaybackActive) return;
+  if (!pattern.length) return;
+  const gridCells = Array.from(document.querySelectorAll('.led-cell'));
+  // Remove previous animations/colors
+  gridCells.forEach(cell => {
+    cell.classList.remove('anim');
+    cell.style.background = '';
+  });
+
+  // Get which cell to animate
+  const step = ledPlaybackIdx % pattern.length;
+  const { row, col } = pattern[step];
+  const cellIdx = row * ledGridCols + col;
+  const cell = gridCells[cellIdx];
+  const color = pastelPalette[step % pastelPalette.length];
+  if (cell) {
+    cell.style.background = color;
+    cell.classList.add('anim');
+  }
+
+  ledPlaybackIdx = (ledPlaybackIdx + 1) % pattern.length;
+  // BPM: quarter notes per minute, step interval in ms
+  const interval = 60000 / bpm;
+  ledPlaybackTimer = setTimeout(() => ledPlayStep(pattern, bpm), interval);
+}
+
+function ledStartPlayback() {
+  const pattern = getLedPatternArray();
+  if (!pattern.length) {
+    alert("No pattern to play!");
+    return;
+  }
+  const bpm = parseInt(document.getElementById('led-bpm').value, 10) || 120;
+  ledPlaybackActive = true;
+  ledPlaybackIdx = 0;
+  document.getElementById('led-play').disabled = true;
+  document.getElementById('led-stop').disabled = false;
+  ledPlayStep(pattern, bpm);
+}
+
+function ledStopPlayback() {
+  ledPlaybackActive = false;
+  clearTimeout(ledPlaybackTimer);
+  document.getElementById('led-play').disabled = false;
+  document.getElementById('led-stop').disabled = true;
+  // Reset grid colors
+  Array.from(document.querySelectorAll('.led-cell')).forEach(cell => {
+    cell.classList.remove('anim');
+    cell.style.background = '';
+  });
+}
+
+document.getElementById('led-play').onclick = ledStartPlayback;
+document.getElementById('led-stop').onclick = ledStopPlayback;
+
+// If BPM changes during playback, update the interval
+document.getElementById('led-bpm').onchange = function() {
+  if (ledPlaybackActive) {
+    ledStopPlayback();
+    ledStartPlayback();
+  }
+};
 // --- LED CIPHER --- //
 function melodyToHash() {
   return melody.map(n => n.midi).join(',');
