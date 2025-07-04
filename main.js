@@ -8,7 +8,7 @@ document.getElementById('zoom-btn').onclick = function() {
   document.getElementById('melody-section').style.display = (tab === 'melody' || tab === 'both') ? '' : 'none';
   document.getElementById('led-section').style.display = (tab === 'led' || tab === 'both') ? '' : 'none';
   document.getElementById('tab-melody').classList.toggle('active', tab === 'melody');
-  document.getElementById('tab-led').classList.toggle('active', tab === 'led');
+  document.getElementById('tab-led').classList.toggle('active', tab === 'led'); 
   document.getElementById('tab-both').classList.toggle('active', tab === 'both');
 }
 
