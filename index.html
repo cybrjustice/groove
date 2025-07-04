@@ -57,6 +57,24 @@
           <input id="led-file" type="file" style="display:none;">
         </div>
         <div id="led-grid-wrap"></div>
+        <div class="input-group" style="margin:1em 0;">
+          <span class="label">LED Pattern:</span>
+          <span id="led-pattern" class="mono"></span>
+          <button id="led-pattern-copy" class="btn">Copy</button>
+          <span id="led-pattern-copy-status" class="copy-status"></span>
+        </div>
+        <div class="input-group" style="margin-top:2em;">
+          <span class="label">Message:</span>
+          <input id="cipher-input" type="text" placeholder="Type a secret message..." style="font-size:1em; padding:4px 12px; border-radius:6px; border:1px solid #ffe600;">
+          <select id="unlock-mode">
+            <option value="melody">Melody Only</option>
+            <option value="led">LED Only</option>
+            <option value="both">Both Required</option>
+          </select>
+          <button id="encode-btn-led" class="btn">Encode</button>
+          <button id="decode-btn-led" class="btn">Decode</button>
+        </div>
+        <div id="cipher-output"></div>
       </section>
     </main>
   </div>
