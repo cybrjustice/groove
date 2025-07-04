@@ -229,16 +229,24 @@
     .hide { display: none !important; }
     #decode-out { font-size: 1.12em; color: #222; margin-top: 0.4em; }
     #encode-out { font-size: 1.12em; color: #222; margin-top: 0.4em; }
+    /* Accessibility zoom */
+    .body-zoomed {
+      font-size: 1.5em !important;
+    }
   </style>
 </head>
 <body>
   <div id="main-wrap">
     <header>
       <h1>authLoop</h1>
-      <div id="mode-toggle">
-        <button id="tab-melody" class="active">Melody</button>
-        <button id="tab-led">LED Grid</button>
-        <button id="tab-both">Both</button>
+      <div style="display: flex; align-items: center;">
+        <div id="mode-toggle">
+          <button id="tab-melody" class="active">Melody</button>
+          <button id="tab-led">LED Grid</button>
+          <button id="tab-both">Both</button>
+        </div>
+        <!-- Accessibility Zoom Button -->
+        <button id="zoom-btn" class="btn" style="margin-left:16px;" aria-label="Zoom content to 150%">Zoom 150%</button>
       </div>
     </header>
     <main>
@@ -270,7 +278,6 @@
         </div>
         <div id="encode-out"></div>
       </section>
-
       <!-- LED Grid Section -->
       <section id="led-section" style="display:none;">
         <h2 style="margin-top:0;">LED Grid Authentication</h2>
@@ -324,6 +331,13 @@
     </main>
   </div>
   <script>
+    // --- Accessibility: Zoom Button ---
+    document.getElementById('zoom-btn').onclick = function() {
+      document.body.classList.toggle('body-zoomed');
+      this.textContent = document.body.classList.contains('body-zoomed') ? "Reset Zoom" : "Zoom 150%";
+    };
+    // --- ALL YOUR ORIGINAL LOGIC BELOW ---
+      <script>
     // Tab switching logic
     function showTab(tab) {
       document.getElementById('melody-section').style.display = (tab === 'melody' || tab === 'both') ? '' : 'none';
