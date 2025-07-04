@@ -316,11 +316,9 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ===== LED GRID LOGIC =====
-
+// --- LED GRID STATE & UI ---
 const ledGridRows = 5, ledGridCols = 5;
 let ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
-
 function renderLedGrid() {
   const gridWrap = document.getElementById('led-grid-wrap');
   gridWrap.innerHTML = '';
@@ -333,6 +331,7 @@ function renderLedGrid() {
       cell.onclick = () => {
         ledGrid[row][col] = !ledGrid[row][col];
         renderLedGrid();
+        updateLedGridHash();
       };
       grid.appendChild(cell);
     }
@@ -340,13 +339,80 @@ function renderLedGrid() {
   gridWrap.appendChild(grid);
 }
 
-// Clear grid
+// --- MELODY JSON SHA-256 AUTH ---
+let loadedMelody = null;
+let loadedMelodyFilename = '';
+
+document.getElementById('led-melody-load').onclick = () =>
+  document.getElementById('led-melody-file').click();
+
+document.getElementById('led-melody-file').onchange = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadedMelodyFilename = file.name;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      loadedMelody = Array.isArray(data) ? data : (data.melody || []);
+      document.getElementById('led-melody-filename').textContent = loadedMelodyFilename;
+      await updateMelodyHash();
+    } catch {
+      loadedMelody = null;
+      document.getElementById('led-melody-filename').textContent = 'Invalid file';
+      document.getElementById('led-melody-hash').textContent = '';
+    }
+  };
+  reader.readAsText(file);
+};
+
+async function updateMelodyHash() {
+  if (!loadedMelody) {
+    document.getElementById('led-melody-hash').textContent = '';
+    return;
+  }
+  // Accept both [{midi, time}] and [int]
+  const midiArr = loadedMelody.map(n => (typeof n === 'object' ? n.midi : n));
+  const timingArr = loadedMelody.map(n => (typeof n === 'object' ? n.time || 0 : 0));
+  const bytes = new Uint8Array([...midiArr, ...timingArr]);
+  const hashBuf = await window.crypto.subtle.digest('SHA-256', bytes);
+  const hash = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  document.getElementById('led-melody-hash').textContent = hash;
+}
+document.getElementById('led-melody-copy').onclick = function() {
+  const hash = document.getElementById('led-melody-hash').textContent;
+  if (hash) {
+    navigator.clipboard.writeText(hash).then(()=>{
+      document.getElementById('led-melody-copy-status').textContent = "Copied!";
+      setTimeout(()=>document.getElementById('led-melody-copy-status').textContent = '', 1200);
+    });
+  }
+};
+
+// --- LED GRID AUTH CODE ---
+function getLedGridCode() {
+  return ledGrid.map(row => row.map(c => (c ? '1' : '0')).join('')).join('');
+}
+function updateLedGridHash() {
+  const code = getLedGridCode();
+  document.getElementById('led-grid-hash').textContent = code;
+}
+document.getElementById('led-grid-copy').onclick = function() {
+  const code = document.getElementById('led-grid-hash').textContent;
+  if (code) {
+    navigator.clipboard.writeText(code).then(()=>{
+      document.getElementById('led-grid-copy-status').textContent = "Copied!";
+      setTimeout(()=>document.getElementById('led-grid-copy-status').textContent = '', 1200);
+    });
+  }
+};
+
+// --- LED GRID FILE CONTROLS ---
 document.getElementById('led-clear').onclick = function() {
   ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
   renderLedGrid();
+  updateLedGridHash();
 };
-
-// Save grid to JSON
 document.getElementById('led-save').onclick = function() {
   const data = JSON.stringify(ledGrid);
   const blob = new Blob([data], {type:'application/json'});
@@ -357,8 +423,6 @@ document.getElementById('led-save').onclick = function() {
   a.click();
   setTimeout(()=>document.body.removeChild(a), 100);
 };
-
-// Load grid from JSON
 document.getElementById('led-load').onclick = function() {
   document.getElementById('led-file').click();
 };
@@ -369,30 +433,30 @@ document.getElementById('led-file').onchange = function(e) {
   reader.onload = function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      // Validate it's a 5x5 array of booleans
-      if (
-        Array.isArray(data) &&
-        data.length === ledGridRows &&
-        data.every(row => Array.isArray(row) && row.length === ledGridCols && row.every(cell => typeof cell === 'boolean'))
-      ) {
+      if (Array.isArray(data) && data.length === ledGridRows && data[0].length === ledGridCols) {
         ledGrid = data;
         renderLedGrid();
-      } else {
-        alert('Invalid LED grid file.');
+        updateLedGridHash();
       }
-    } catch {
-      alert('Invalid file.');
-    }
+    } catch { /* ignore */ }
   };
   reader.readAsText(file);
 };
 
-// Initial render (call once on page load)
-if (document.readyState === "loading") {
-  window.addEventListener('DOMContentLoaded', renderLedGrid);
-} else {
+// --- INIT LED TAB ---
+function ledTabInit() {
   renderLedGrid();
-}// ======= Robust Encoding / Decoding (unchanged, but uses melody.map) =======
+  updateLedGridHash();
+  document.getElementById('led-melody-filename').textContent = '';
+  document.getElementById('led-melody-hash').textContent = '';
+  document.getElementById('led-grid-hash').textContent = '';
+}
+if (document.readyState === "loading") {
+  window.addEventListener('DOMContentLoaded', ledTabInit);
+} else {
+  ledTabInit();
+}
+// ======= Robust Encoding / Decoding (unchanged, but uses melody.map) =======
 function melodyToHash() {
   // Use basic hash for demo
   return melody.map(n => n.midi).join(',');
