@@ -1,7 +1,7 @@
 // --- Accessibility: Zoom Button ---
 document.getElementById('zoom-btn').onclick = function() {
   document.body.classList.toggle('body-zoomed');
-  this.textContent = document.body.classList.contains('body-zoomed') ? "Reset Zoom" : "Zoom 150%";
+  this.textContent = document.body.classList.contains('body-zoomed') ? "Reset Zoom" : "Zoom 200%";
 };
 
 // --- Tab switching logic ---
