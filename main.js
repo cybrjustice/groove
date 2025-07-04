@@ -456,6 +456,169 @@ if (document.readyState === "loading") {
 } else {
   ledTabInit();
 }
+// --- Tab switching logic (keep your existing, but add this for 'both') ---
+document.getElementById('tab-melody').onclick = function() {
+  document.getElementById('melody-section').style.display = '';
+  document.getElementById('led-section').style.display = 'none';
+  this.classList.add('active');
+  document.getElementById('tab-led').classList.remove('active');
+  document.getElementById('tab-both').classList.remove('active');
+};
+document.getElementById('tab-led').onclick = function() {
+  document.getElementById('melody-section').style.display = 'none';
+  document.getElementById('led-section').style.display = '';
+  this.classList.add('active');
+  document.getElementById('tab-melody').classList.remove('active');
+  document.getElementById('tab-both').classList.remove('active');
+};
+document.getElementById('tab-both').onclick = function() {
+  document.getElementById('melody-section').style.display = '';
+  document.getElementById('led-section').style.display = '';
+  this.classList.add('active');
+  document.getElementById('tab-melody').classList.remove('active');
+  document.getElementById('tab-led').classList.remove('active');
+};
+
+// --- LED GRID LOGIC ---
+const ledGridRows = 5, ledGridCols = 5;
+let ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
+function renderLedGrid() {
+  const gridWrap = document.getElementById('led-grid-wrap');
+  gridWrap.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'led-grid';
+  for (let row = 0; row < ledGridRows; row++) {
+    for (let col = 0; col < ledGridCols; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'led-cell' + (ledGrid[row][col] ? ' on' : '');
+      cell.onclick = () => {
+        ledGrid[row][col] = !ledGrid[row][col];
+        renderLedGrid();
+        updateLedGridHash();
+      };
+      grid.appendChild(cell);
+    }
+  }
+  gridWrap.appendChild(grid);
+}
+
+// --- Melody JSON SHA-256 AUTH ---
+let loadedMelody = null;
+let loadedMelodyFilename = '';
+
+document.getElementById('led-melody-load').onclick = () =>
+  document.getElementById('led-melody-file').click();
+
+document.getElementById('led-melody-file').onchange = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadedMelodyFilename = file.name;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      loadedMelody = Array.isArray(data) ? data : (data.melody || []);
+      document.getElementById('led-melody-filename').textContent = loadedMelodyFilename;
+      await updateMelodyHash();
+    } catch {
+      loadedMelody = null;
+      document.getElementById('led-melody-filename').textContent = 'Invalid file';
+      document.getElementById('led-melody-hash').textContent = '';
+    }
+  };
+  reader.readAsText(file);
+};
+
+async function updateMelodyHash() {
+  if (!loadedMelody) {
+    document.getElementById('led-melody-hash').textContent = '';
+    return;
+  }
+  // Accept both [{midi, time}] and [int]
+  const midiArr = loadedMelody.map(n => (typeof n === 'object' ? n.midi : n));
+  const timingArr = loadedMelody.map(n => (typeof n === 'object' ? n.time || 0 : 0));
+  const bytes = new Uint8Array([...midiArr, ...timingArr]);
+  const hashBuf = await window.crypto.subtle.digest('SHA-256', bytes);
+  const hash = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  document.getElementById('led-melody-hash').textContent = hash;
+}
+document.getElementById('led-melody-copy').onclick = function() {
+  const hash = document.getElementById('led-melody-hash').textContent;
+  if (hash) {
+    navigator.clipboard.writeText(hash).then(()=>{
+      document.getElementById('led-melody-copy-status').textContent = "Copied!";
+      setTimeout(()=>document.getElementById('led-melody-copy-status').textContent = '', 1200);
+    });
+  }
+};
+
+// --- LED GRID CODE ---
+function getLedGridCode() {
+  return ledGrid.map(row => row.map(c => (c ? '1' : '0')).join('')).join('');
+}
+function updateLedGridHash() {
+  const code = getLedGridCode();
+  document.getElementById('led-grid-hash').textContent = code;
+}
+document.getElementById('led-grid-copy').onclick = function() {
+  const code = document.getElementById('led-grid-hash').textContent;
+  if (code) {
+    navigator.clipboard.writeText(code).then(()=>{
+      document.getElementById('led-grid-copy-status').textContent = "Copied!";
+      setTimeout(()=>document.getElementById('led-grid-copy-status').textContent = '', 1200);
+    });
+  }
+};
+
+// --- LED GRID FILE CONTROLS ---
+document.getElementById('led-clear').onclick = function() {
+  ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
+  renderLedGrid();
+  updateLedGridHash();
+};
+document.getElementById('led-save').onclick = function() {
+  const data = JSON.stringify(ledGrid);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ledgrid.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>document.body.removeChild(a), 100);
+};
+document.getElementById('led-load').onclick = function() {
+  document.getElementById('led-file').click();
+};
+document.getElementById('led-file').onchange = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (Array.isArray(data) && data.length === ledGridRows && data[0].length === ledGridCols) {
+        ledGrid = data;
+        renderLedGrid();
+        updateLedGridHash();
+      }
+    } catch { /* ignore */ }
+  };
+  reader.readAsText(file);
+};
+
+// --- INIT ---
+function ledTabInit() {
+  renderLedGrid();
+  updateLedGridHash();
+  document.getElementById('led-melody-filename').textContent = '';
+  document.getElementById('led-melody-hash').textContent = '';
+  document.getElementById('led-grid-hash').textContent = '';
+}
+if (document.readyState === "loading") {
+  window.addEventListener('DOMContentLoaded', ledTabInit);
+} else {
+  ledTabInit();
+}
 // ======= Robust Encoding / Decoding (unchanged, but uses melody.map) =======
 function melodyToHash() {
   // Use basic hash for demo
