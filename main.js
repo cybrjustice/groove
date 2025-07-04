@@ -294,7 +294,8 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ======= LED GRID =======
+// ===== LED GRID LOGIC =====
+
 const ledGridRows = 5, ledGridCols = 5;
 let ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
 
@@ -307,16 +308,23 @@ function renderLedGrid() {
     for (let col = 0; col < ledGridCols; col++) {
       const cell = document.createElement('div');
       cell.className = 'led-cell' + (ledGrid[row][col] ? ' on' : '');
-      cell.onclick = () => { ledGrid[row][col] = !ledGrid[row][col]; renderLedGrid(); };
+      cell.onclick = () => {
+        ledGrid[row][col] = !ledGrid[row][col];
+        renderLedGrid();
+      };
       grid.appendChild(cell);
     }
   }
   gridWrap.appendChild(grid);
 }
+
+// Clear grid
 document.getElementById('led-clear').onclick = function() {
   ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
   renderLedGrid();
 };
+
+// Save grid to JSON
 document.getElementById('led-save').onclick = function() {
   const data = JSON.stringify(ledGrid);
   const blob = new Blob([data], {type:'application/json'});
@@ -327,6 +335,8 @@ document.getElementById('led-save').onclick = function() {
   a.click();
   setTimeout(()=>document.body.removeChild(a), 100);
 };
+
+// Load grid from JSON
 document.getElementById('led-load').onclick = function() {
   document.getElementById('led-file').click();
 };
@@ -336,14 +346,31 @@ document.getElementById('led-file').onchange = function(e) {
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      ledGrid = JSON.parse(e.target.result);
-      renderLedGrid();
-    } catch { /* ignore */ }
+      const data = JSON.parse(e.target.result);
+      // Validate it's a 5x5 array of booleans
+      if (
+        Array.isArray(data) &&
+        data.length === ledGridRows &&
+        data.every(row => Array.isArray(row) && row.length === ledGridCols && row.every(cell => typeof cell === 'boolean'))
+      ) {
+        ledGrid = data;
+        renderLedGrid();
+      } else {
+        alert('Invalid LED grid file.');
+      }
+    } catch {
+      alert('Invalid file.');
+    }
   };
   reader.readAsText(file);
 };
 
-// ======= Robust Encoding / Decoding (unchanged, but uses melody.map) =======
+// Initial render (call once on page load)
+if (document.readyState === "loading") {
+  window.addEventListener('DOMContentLoaded', renderLedGrid);
+} else {
+  renderLedGrid();
+}// ======= Robust Encoding / Decoding (unchanged, but uses melody.map) =======
 function melodyToHash() {
   // Use basic hash for demo
   return melody.map(n => n.midi).join(',');
