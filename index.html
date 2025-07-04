@@ -2,8 +2,140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ai-n LoopCipher</title>
-  <link rel="stylesheet" href="style.css">
+  <title>authLoop – Melody & LED Grid Auth</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css?family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: #f7f7f7;
+      color: #222;
+      font-family: 'Space Mono', monospace;
+      margin: 0;
+      padding: 0;
+    }
+    #main-wrap {
+      max-width: 820px;
+      margin: 32px auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 32px 0 #1112, 0 0 0 8px #e0e0e0 inset;
+      overflow: hidden;
+    }
+    header {
+      background: #fff;
+      border-bottom: 2px solid #ffe600;
+      padding: 18px 36px 10px 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 {
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.07em;
+      font-size: 2.2em;
+      color: #222;
+    }
+    #mode-toggle button {
+      background: #ececec;
+      border: none;
+      border-radius: 12px 12px 0 0;
+      margin-left: 2px;
+      font-family: inherit;
+      font-size: 1em;
+      padding: 8px 20px 6px 20px;
+      color: #888;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    #mode-toggle .active {
+      background: #ffe600;
+      color: #111;
+      font-weight: bold;
+    }
+    main {
+      padding: 36px;
+      background: #f7f7f7;
+    }
+    section {
+      margin-bottom: 40px;
+    }
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 7px;
+      flex-wrap: wrap;
+    }
+    .label {
+      font-weight: bold;
+      color: #222;
+      margin-right: 5px;
+    }
+    .mono {
+      font-family: "Space Mono", monospace;
+      font-size: 1.09em;
+      color: #444;
+      margin-right: 7px;
+      word-break: break-all;
+      user-select: all;
+    }
+    .copy-status {
+      color: #2a5;
+      font-size: 0.95em;
+      min-width: 50px;
+    }
+    .btn {
+      background: #ececec;
+      color: #222;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
+      font-family: inherit;
+      padding: 7px 16px;
+      cursor: pointer;
+      margin-right: 8px;
+      margin-bottom: 7px;
+      transition: background 0.15s;
+    }
+    .btn:active, .btn:focus {
+      background: #ffe600;
+      color: #222;
+      outline: none;
+    }
+    #led-grid-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 0.6em 0 1em 0;
+    }
+    .led-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 36px);
+      grid-template-rows: repeat(5, 36px);
+      gap: 7px;
+      background: #fff;
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 1px 7px #ffe60044;
+      border: 2px solid #ffe600;
+      width: max-content;
+    }
+    .led-cell {
+      width: 36px;
+      height: 36px;
+      border-radius: 7px;
+      background: #ececec;
+      border: 1.5px solid #ffe600;
+      box-shadow: 0 0 4px #ffe60044 inset;
+      cursor: pointer;
+      transition: background 0.14s, border-color 0.18s;
+    }
+    .led-cell.on {
+      background: #ffe600;
+      border-color: #222;
+      box-shadow: 0 0 12px #ffe60077, 0 0 7px #ffe60044 inset;
+    }
+  </style>
 </head>
 <body>
   <div id="main-wrap">
@@ -16,76 +148,206 @@
       </div>
     </header>
     <main>
+      <!-- Melody Section (Stub, you can expand as needed) -->
       <section id="melody-section">
-        <div id="piano-wrap"></div>
-        <div id="melody-bar"></div>
-        <div id="melody-controls">
-          <button id="melody-record">Record</button>
-          <button id="melody-stop" disabled>Stop</button>
-          <button id="melody-play">Play</button>
-          <button id="melody-clear">Clear</button>
-          <button id="melody-save">Save</button>
-          <button id="melody-load">Load</button>
-          <input id="melody-file" type="file" style="display:none;">
-        </div>
-        <!-- LED GRID TAB -->
-  <section id="led-section" style="display:none;">
-    <h2>LED Grid Authentication</h2>
-    <div style="margin-bottom:1em;">
-      <button id="led-melody-load">Open Melody JSON</button>
-      <input type="file" id="led-melody-file" accept="application/json" style="display:none;">
-      <span id="led-melody-filename" style="color:#888;margin-left:10px;"></span>
-    </div>
-    <div style="margin:1em 0;">
-      <b>Melody SHA-256:</b>
-      <span id="led-melody-hash" style="font-family:monospace;user-select:all;"></span>
-      <button id="led-melody-copy">Copy</button>
-      <span id="led-melody-copy-status" style="color:#2a5;"></span>
-    </div>
-    <div id="led-grid-wrap" style="margin-top:18px;"></div>
-    <div style="margin:1em 0;">
-      <b>LED Grid Auth Code:</b>
-      <span id="led-grid-hash" style="font-family:monospace;user-select:all;"></span>
-      <button id="led-grid-copy">Copy</button>
-      <span id="led-grid-copy-status" style="color:#2a5;"></span>
-    </div>
-    <div style="margin-top:10px;">
-      <button id="led-clear">Clear</button>
-      <button id="led-save">Save Pattern</button>
-      <button id="led-load">Load Pattern</button>
-      <input type="file" id="led-file" accept="application/json" style="display:none;">
-    </div>
-  </section>
-</main>
+        <h2 style="margin-top:0;">Melody Lock (Stub)</h2>
+        <p>This is your melody lock tab. Add your melody/piano UI here.</p>
       </section>
-      <section id="cipher-section">
-        <div>
-          <label>Message:</label>
-          <input id="cipher-input" type="text" placeholder="Type a secret message...">
+
+      <!-- LED Grid Section -->
+      <section id="led-section" style="display:none;">
+        <h2 style="margin-top:0;">LED Grid Authentication</h2>
+        <div class="input-group">
+          <button id="led-melody-load" class="btn">Open Melody JSON</button>
+          <input type="file" id="led-melody-file" accept="application/json" style="display:none;">
+          <span id="led-melody-filename" style="color:#888;margin-left:10px;"></span>
         </div>
-        <div>
-          <label>Unlock Mode:</label>
-          <select id="unlock-mode">
-            <option value="melody">Melody Only</option>
-            <option value="led">LED Only</option>
-            <option value="both">Both Required</option>
-          </select>
+        <div class="input-group" style="margin:1em 0;">
+          <span class="label">Melody SHA-256:</span>
+          <span id="led-melody-hash" class="mono"></span>
+          <button id="led-melody-copy" class="btn">Copy</button>
+          <span id="led-melody-copy-status" class="copy-status"></span>
         </div>
-        <div>
-          <button id="encode-btn">Encode</button>
-          <button id="decode-btn">Decode</button>
+        <div style="margin:0.8em 0 0.5em 0;">
+          <span class="label">LED Grid Pattern:</span>
+          <span id="led-grid-hash" class="mono"></span>
+          <button id="led-grid-copy" class="btn">Copy</button>
+          <span id="led-grid-copy-status" class="copy-status"></span>
         </div>
-        <div id="cipher-output"></div>
+        <div id="led-grid-wrap" style="margin:18px 0 14px 0;"></div>
+        <div class="input-group">
+          <button id="led-clear" class="btn">Clear</button>
+          <button id="led-save" class="btn">Save Pattern</button>
+          <button id="led-load" class="btn">Load Pattern</button>
+          <input type="file" id="led-file" accept="application/json" style="display:none;">
+        </div>
       </section>
     </main>
-    <footer>
-      <div id="metronome-controls">
-        <button id="metronome-toggle">Metronome: OFF</button>
-        <label>BPM: <input id="bpm" type="number" value="120" min="50" max="220"></label>
-        <label>Quantize: <input id="quantize" type="checkbox" checked></label>
-      </div>
-    </footer>
   </div>
-  <script src="main.js"></script>
+  <script>
+    // --- Tab switching logic ---
+    document.getElementById('tab-melody').onclick = function() {
+      document.getElementById('melody-section').style.display = '';
+      document.getElementById('led-section').style.display = 'none';
+      this.classList.add('active');
+      document.getElementById('tab-led').classList.remove('active');
+      document.getElementById('tab-both').classList.remove('active');
+    };
+    document.getElementById('tab-led').onclick = function() {
+      document.getElementById('melody-section').style.display = 'none';
+      document.getElementById('led-section').style.display = '';
+      this.classList.add('active');
+      document.getElementById('tab-melody').classList.remove('active');
+      document.getElementById('tab-both').classList.remove('active');
+    };
+    document.getElementById('tab-both').onclick = function() {
+      document.getElementById('melody-section').style.display = '';
+      document.getElementById('led-section').style.display = '';
+      this.classList.add('active');
+      document.getElementById('tab-melody').classList.remove('active');
+      document.getElementById('tab-led').classList.remove('active');
+    };
+
+    // --- LED GRID LOGIC ---
+    const ledGridRows = 5, ledGridCols = 5;
+    let ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
+    function renderLedGrid() {
+      const gridWrap = document.getElementById('led-grid-wrap');
+      gridWrap.innerHTML = '';
+      const grid = document.createElement('div');
+      grid.className = 'led-grid';
+      for (let row = 0; row < ledGridRows; row++) {
+        for (let col = 0; col < ledGridCols; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'led-cell' + (ledGrid[row][col] ? ' on' : '');
+          cell.onclick = () => {
+            ledGrid[row][col] = !ledGrid[row][col];
+            renderLedGrid();
+            updateLedGridHash();
+          };
+          grid.appendChild(cell);
+        }
+      }
+      gridWrap.appendChild(grid);
+    }
+
+    // --- Melody JSON SHA-256 AUTH ---
+    let loadedMelody = null;
+    let loadedMelodyFilename = '';
+
+    document.getElementById('led-melody-load').onclick = () =>
+      document.getElementById('led-melody-file').click();
+
+    document.getElementById('led-melody-file').onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      loadedMelodyFilename = file.name;
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          loadedMelody = Array.isArray(data) ? data : (data.melody || []);
+          document.getElementById('led-melody-filename').textContent = loadedMelodyFilename;
+          await updateMelodyHash();
+        } catch {
+          loadedMelody = null;
+          document.getElementById('led-melody-filename').textContent = 'Invalid file';
+          document.getElementById('led-melody-hash').textContent = '';
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    async function updateMelodyHash() {
+      if (!loadedMelody) {
+        document.getElementById('led-melody-hash').textContent = '';
+        return;
+      }
+      // Accept both [{midi, time}] and [int]
+      const midiArr = loadedMelody.map(n => (typeof n === 'object' ? n.midi : n));
+      const timingArr = loadedMelody.map(n => (typeof n === 'object' ? n.time || 0 : 0));
+      const bytes = new Uint8Array([...midiArr, ...timingArr]);
+      const hashBuf = await window.crypto.subtle.digest('SHA-256', bytes);
+      const hash = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      document.getElementById('led-melody-hash').textContent = hash;
+    }
+    document.getElementById('led-melody-copy').onclick = function() {
+      const hash = document.getElementById('led-melody-hash').textContent;
+      if (hash) {
+        navigator.clipboard.writeText(hash).then(()=>{
+          document.getElementById('led-melody-copy-status').textContent = "Copied!";
+          setTimeout(()=>document.getElementById('led-melody-copy-status').textContent = '', 1200);
+        });
+      }
+    };
+
+    // --- LED GRID CODE ---
+    function getLedGridCode() {
+      return ledGrid.map(row => row.map(c => (c ? '1' : '0')).join('')).join('');
+    }
+    function updateLedGridHash() {
+      const code = getLedGridCode();
+      document.getElementById('led-grid-hash').textContent = code;
+    }
+    document.getElementById('led-grid-copy').onclick = function() {
+      const code = document.getElementById('led-grid-hash').textContent;
+      if (code) {
+        navigator.clipboard.writeText(code).then(()=>{
+          document.getElementById('led-grid-copy-status').textContent = "Copied!";
+          setTimeout(()=>document.getElementById('led-grid-copy-status').textContent = '', 1200);
+        });
+      }
+    };
+
+    // --- LED GRID FILE CONTROLS ---
+    document.getElementById('led-clear').onclick = function() {
+      ledGrid = Array.from({length: ledGridRows}, () => Array(ledGridCols).fill(false));
+      renderLedGrid();
+      updateLedGridHash();
+    };
+    document.getElementById('led-save').onclick = function() {
+      const data = JSON.stringify(ledGrid);
+      const blob = new Blob([data], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ledgrid.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>document.body.removeChild(a), 100);
+    };
+    document.getElementById('led-load').onclick = function() {
+      document.getElementById('led-file').click();
+    };
+    document.getElementById('led-file').onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (Array.isArray(data) && data.length === ledGridRows && data[0].length === ledGridCols) {
+            ledGrid = data;
+            renderLedGrid();
+            updateLedGridHash();
+          }
+        } catch { /* ignore */ }
+      };
+      reader.readAsText(file);
+    };
+
+    // --- INIT ---
+    function ledTabInit() {
+      renderLedGrid();
+      updateLedGridHash();
+      document.getElementById('led-melody-filename').textContent = '';
+      document.getElementById('led-melody-hash').textContent = '';
+      document.getElementById('led-grid-hash').textContent = '';
+    }
+    if (document.readyState === "loading") {
+      window.addEventListener('DOMContentLoaded', ledTabInit);
+    } else {
+      ledTabInit();
+    }
+  </script>
 </body>
 </html>
